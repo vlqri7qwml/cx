@@ -1,0 +1,97 @@
+name: build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.25.x"
+  WINTUN_VERSION: "0.14.1"
+
+jobs:
+  # 平台无关的检查跑在 Linux 上：这部分逻辑（代理解析、SOCKS5、DNS、IPC、
+  # 断网保护的网段换算）都有单元测试，不需要 Windows 也能验证。
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: gofmt
+        run: |
+          out="$(gofmt -l . )"
+          if [ -n "$out" ]; then
+            echo "以下文件未格式化："
+            echo "$out"
+            exit 1
+          fi
+
+      - name: go vet (linux)
+        run: go vet ./...
+
+      - name: go vet (windows)
+        run: GOOS=windows GOARCH=amd64 go vet ./...
+        env:
+          CGO_ENABLED: "0"
+
+      - name: go test
+        run: go test -race ./...
+
+      - name: 交叉编译检查
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./...
+
+  build:
+    runs-on: windows-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: 安装 Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: 构建（下载并校验 Wintun、生成资源、编译、打包）
+        shell: pwsh
+        run: |
+          $version = "1.0.0"
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $version = $env:GITHUB_REF -replace "^refs/tags/v", ""
+          }
+          Write-Host "构建版本 $version"
+          & .\build\build.ps1 -Version $version -WintunVersion $env:WINTUN_VERSION
+        env:
+          # 需要覆盖官网校验值时在仓库 Secrets 里设置 WINTUN_SHA256。
+          WINTUN_SHA256: ${{ secrets.WINTUN_SHA256 }}
+
+      - name: 确认产物齐全
+        shell: pwsh
+        run: |
+          $need = @("build\dist\cxproxy.exe", "build\dist\wintun.dll")
+          foreach ($f in $need) {
+            if (-not (Test-Path $f)) { throw "缺少产物 $f" }
+          }
+          Get-ChildItem build\dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cxproxy-windows-amd64
+          path: |
+            build/dist/cxproxy.exe
+            build/dist/wintun.dll
+            build/dist/CXProxy-Setup-*.exe
+            build/dist/README.txt
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,39 @@
+{
+  "RT_GROUP_ICON": {
+    "APP": {
+      "0000": [
+        "icon.png",
+        "icon48.png",
+        "icon32.png",
+        "icon16.png"
+      ]
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": "cxproxy.manifest"
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0000": {
+        "fixed": {
+          "file_version": "1.0.0.0",
+          "product_version": "1.0.0.0"
+        },
+        "info": {
+          "0409": {
+            "CompanyName": "CXProxy",
+            "FileDescription": "CXProxy 代理与断网保护",
+            "FileVersion": "1.0.0.0",
+            "InternalName": "cxproxy",
+            "LegalCopyright": "Copyright (C) 2026",
+            "OriginalFilename": "cxproxy.exe",
+            "ProductName": "CXProxy",
+            "ProductVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  }
+}

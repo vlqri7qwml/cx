@@ -1,0 +1,14 @@
+# 构建产物
+/build/dist/
+/build/_work/
+
+# 由 build/mkicon 在构建期生成，不入库
+/build/*.png
+/build/*.ico
+
+# go-winres 生成的资源对象
+*.syso
+
+# 本地调试产物
+/cxproxy.exe
+/cxproxy
